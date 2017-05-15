@@ -152,6 +152,12 @@ function episode_guide($arg){
 }
 
 function test_calendar(){
+    $result = db_query('SELECT * FROM show_info');
+    $show_array = array();
+    foreach ($result as $record) {
+      // $answer .= "<li>Show Name: " . $record->show_name . " - Show Time: " . $record->show_time . "</li>";
+      array_push($show_array, $record->show_time);
+    }
     $testvar = $_SESSION['calendar_info'];
     drupal_add_js(array('testform' => array('testvar' => $testvar)), array('type' => 'setting'));
     drupal_add_js(drupal_get_path('module', 'testform') . '/js/testform.js');
