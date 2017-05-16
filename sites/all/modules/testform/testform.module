@@ -115,11 +115,11 @@ function api_form_success() {
     $show_name = $_SESSION['api_form_values'];
     $show_name_clean = str_replace(" ", "+", $show_name);
     $response = file_get_contents('http://api.tvmaze.com/search/shows?q=' . $show_name_clean);
-    $answer = "<p>" . $show_name . "</p><ul>";
+    $answer = "<p>Search results for: '" . $show_name . "'</p><ul>";
     // 
     $decode = json_decode($response, true);
     foreach ($decode as $episode) {
-      $answer .= "<li><a href='/episodes/" . $episode['show']['id'] . "'>" . $episode['show']['name'] . "</a></li>";
+      $answer .= "<li><a href='/episodes/" . $episode['show']['id'] . "'>" . $episode['show']['name'] . ' (' . substr($episode['show']['premiered'], 0, 4) .")</a></li>";
     }
     return $answer .= "</ul>";
 }
@@ -134,32 +134,52 @@ function form_success() {
 }
 
 function episode_guide($arg){
+  global $user;
   $response = file_get_contents('http://api.tvmaze.com/shows/' . $arg . '/episodes');
-  $show = file_get_contents('http://api.tvmaze.com/shows/' . $arg);
   $answer = "<ul>";
   $decode = json_decode($response, true);
-  $show_data = json_decode($show, true);
-  $show_name = $show_data['name'];
   
   $dates = array();
   foreach ($decode as $episode) {
     $answer .= "<li>" . $episode['name'] . ": " . $episode['airtime']  . " " . $episode['airdate'] . "</li>";
-    $episode_info = array("Show Name"=> $show_name, "Show Id"=>$arg, "Episode Name"=>$episode['name'], "Episode Date"=> $episode['airdate']);
-    array_push($dates, $episode_info);
   }
-  $_SESSION['calendar_info'] = $dates;
+  $result = db_query('SELECT * FROM show_info WHERE user_id = ' . $user->uid);
+  $found = false;
+  foreach ($result as $record) {
+    if($record->show_api_id == $arg){
+      $found = true;
+    }
+  }
+  if($found == false){
+    db_insert('show_info')
+    ->fields(array(
+      'show_api_id' => $arg,
+      'user_id' => $user->uid,
+    ))->execute();
+    
+  }
   return $answer .= "</ul>";
 }
 
 function test_calendar(){
-    $result = db_query('SELECT * FROM show_info');
+  global $user;
+    $result = db_query('SELECT * FROM show_info WHERE user_id = ' . $user->uid);
     $show_array = array();
     foreach ($result as $record) {
-      // $answer .= "<li>Show Name: " . $record->show_name . " - Show Time: " . $record->show_time . "</li>";
-      array_push($show_array, $record->show_time);
+      print "<pre>";
+      var_dump($record->show_api_id);
+      print "</pre>";
+      $api_response = file_get_contents('http://api.tvmaze.com/shows/' . $record->show_api_id . '/episodes');
+      $show = file_get_contents('http://api.tvmaze.com/shows/' . $record->show_api_id);
+      $show_data = json_decode($show, true);
+      $show_name = $show_data['name'];
+      $decode = json_decode($api_response, true);
+      foreach ($decode as $episode) {
+        $episode_info = array("Show Name"=> $show_name, "Show Id"=>$record->show_api_id, "Episode Name"=>$episode['name'], "Episode Date"=> $episode['airdate']);
+        array_push($show_array, $episode_info);
+      }
     }
-    $testvar = $_SESSION['calendar_info'];
-    drupal_add_js(array('testform' => array('testvar' => $testvar)), array('type' => 'setting'));
+    drupal_add_js(array('testform' => array('testvar' => $show_array)), array('type' => 'setting'));
     drupal_add_js(drupal_get_path('module', 'testform') . '/js/testform.js');
     return "<div><button class='prev_btn'>Previous Week</button><button class='today_btn'>Today</button><button class='next_btn'>Next Week</button><div class='container calendar_holder'></div></div>";
 }

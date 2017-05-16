@@ -60,7 +60,7 @@
   Drupal.behaviors.testform = {
     attach: function (context, settings) {
       episode_info = settings.testform.testvar;
-      // console.log(isoDate[0]);
+      console.log(episode_info);
       dateRange();
       $(".prev_btn").click(function(){
         arg -= 7;
@@ -79,5 +79,4 @@
       });
     }
   };
-  
 })(jQuery);
