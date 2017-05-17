@@ -24,4 +24,5 @@ regions[page_bottom]    = 'Page bottom'
 ;; Stylesheets
 ;;;;;;;;;;;;;;;;;;;;;
 
+stylesheets[all][] = css/flatly.css
 stylesheets[all][] = css/style.css

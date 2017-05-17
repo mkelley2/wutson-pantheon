@@ -177,7 +177,16 @@ function episode_delete(){
 }
 
 function testform_boot(){
-  drupal_set_message("All episodes deleted");
+  drupal_set_message("All episodes updated");
+  $query = db_select('node', 'n')
+    ->fields('n', array('nid', 'title'))
+    ->condition('status', 1)
+    ->condition('type', 'episode')
+    ->execute();
+    
+  foreach($query as $word) {
+    $node = node_load($word->nid);
+  }
 }
 
 //old js link
