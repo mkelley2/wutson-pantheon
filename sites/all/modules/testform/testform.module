@@ -163,29 +163,94 @@ function episode_guide($arg){
 
 function episode_delete(){
   // global $user;
+  // $blah = node_load(328);
+  // print "<pre>"; 
+  // var_dump($blah);
+  // print "</pre>";
   $query = db_select('node', 'n')
     ->fields('n', array('nid', 'title'))
     ->condition('status', 1)
     ->condition('type', 'episode')
     ->execute();
       
-  foreach($query as $word) {
-    $node = node_load($word->nid);
+  foreach($query as $show_node) {
+    $node = node_load($show_node->nid);
     node_delete($node->nid);
   }
+  drupal_set_message("All episodes deleted");
   return "";
 }
 
-function testform_boot(){
-  drupal_set_message("All episodes updated");
-  $query = db_select('node', 'n')
-    ->fields('n', array('nid', 'title'))
-    ->condition('status', 1)
-    ->condition('type', 'episode')
-    ->execute();
+
+function testform_page_alter(&$page){
+  global $user;
+  $last_update = db_query('SELECT * FROM show_info ORDER BY show_id DESC LIMIT 1')->fetchAssoc();
+  if($_GET['q'] == 'calendar' && ($last_update['last_update']+86400000)< time()){
+    $response = file_get_contents('http://api.tvmaze.com/updates/shows');
+    $decode = json_decode($response, true);
     
-  foreach($query as $word) {
-    $node = node_load($word->nid);
+    $query = db_select('node', 'n')
+      ->fields('n', array('nid', 'title'))
+      ->condition('status', 1)
+      ->condition('type', 'show')
+      ->execute();
+      
+    foreach($query as $show_node) {
+      $node = node_load($show_node->nid);
+      if($node->field_last_updated['und'][0]['value'] < $decode[$node->field_show_id['und'][0]['value']]){
+        $show = file_get_contents('http://api.tvmaze.com/shows/' . $node->field_show_id['und'][0]['value']);
+        $show_data = json_decode($show, true);
+        
+        $episode_response = file_get_contents('http://api.tvmaze.com/shows/' . $node->field_show_id['und'][0]['value'] . '/episodes');
+        $episode_decode = json_decode($episode_response, true);
+          //update show information
+          node_object_prepare($node);
+          $node->field_show_id['und'][0] = array('value'=>$show_data['id']);
+          $node->field_last_updated['und'][0] = array('value'=>$show_data['updated']);
+          $node->field_show_network['und'][0] = array('value'=>$show_data['network']['name']);
+          $node->field_show_summary['und'][0] = array('value'=>$show_data['summary'], 'format'=>'full_html');
+          $node->field_show_status['und'][0] = array('value'=>$show_data['status']);
+          $next = explode('/',$show_data['_links']['nextepisode']['href']);
+          $node->field_show_next['und'][0] = array('value'=>end($next));
+          $node = node_submit($node);
+          node_save($node);
+          
+          foreach ($episode_decode as $episode) {
+            $ep_query = db_select('node', 'n')
+              ->fields('n', array('nid', 'title'))
+              ->condition('status', 1)
+              ->condition('type', 'episode')
+              ->condition('title', $episode['name'])
+              ->execute()
+              ->fetchAssoc();
+            if(!$ep_query){
+              $new_episode = new stdClass();
+              $new_episode->title = $episode['name'];
+              $new_episode->type = "episode";
+              node_object_prepare($new_episode);
+              $new_episode->uid = $user->uid;
+              $new_episode->status = 1;
+              $new_episode->language = LANGUAGE_NONE;
+              $new_episode->field_episode_show_id['und'][0] = array('value'=>$show_data['id']);
+              $new_episode->field_episode_show_name['und'][0] = array('value'=>$show_data['name']);
+              $new_episode->field_episode_date['und'][0] = array('value'=>$episode['airdate'] . " " . $episode['airtime'] . ":00");
+              $new_episode->field_show_ref['und'][0] = array('nid'=>$show_node->nid);
+              $new_episode->field_episode_id['und'][0] = array('value'=>$episode['id']);
+              $new_episode->field_season['und'][0] = array('value'=>$episode['season']);
+              $new_episode->field_episode_number['und'][0] = array('value'=>$episode['number']);
+              $new_episode->field_episode_summary['und'][0] = array('value'=>$episode['summary'], 'format'=>'full_html');
+              $new_episode = node_submit($new_episode);
+              node_save($new_episode);
+            }
+          }
+        drupal_set_message("Updated Episodes for: " . $show_node->title);
+      }
+    }
+    $nid = db_insert('show_info')
+      ->fields(array(
+        'last_update' => time()
+      ))
+      ->execute();
   }
 }
 
