@@ -7,19 +7,6 @@ function testform_menu() {
         'access callback' => TRUE,
         'type' => MENU_CALLBACK,
     );
-    $items['form_test'] = array(
-        'title' => 'Test Form!',
-        'page callback' => 'drupal_get_form',
-        'page arguments' => array('test_form'),
-        'access callback' => TRUE,
-        'type' => MENU_NORMAL_ITEM,
-    );
-    $items['form_success_page'] = array(
-        'title' => 'Your TV Shows',
-        'page callback' => 'form_success',
-        'access callback' => TRUE,
-        'type' => MENU_CALLBACK,
-    );
     $items['api_form_success_page'] = array(
         'title' => 'Api Results',
         'page callback' => 'api_form_success',
@@ -41,36 +28,6 @@ function testform_menu() {
         'type' => MENU_CALLBACK,
     );
     return $items;
-}
-
-function test_form() {
-  $date = '2008-12-31 00:00:00';
-  $form['show_name'] = array(
-      '#title' => 'Show Name',
-      '#type' => 'textfield',
-      '#description' => t('Please Your Show Name.'),
-  );
-
-  $format = 'Y-m-d H:i';
- 
-  $form['show_time'] = array(
-     '#type' => 'date_select', // types 'date_text' and 'date_timezone' are also supported. See .inc file.
-     '#title' => t('Select a date'),
-     '#default_value' => $date, 
-     '#date_format' => $format,
-     '#date_label_position' => 'within', // See other available attributes and what they do in date_api_elements.inc
-     '#date_timezone' => 'America/Chicago', // Optional, if your date has a timezone other than the site timezone.
-     '#date_increment' => 15, // Optional, used by the date_select and date_popup elements to increment minutes and seconds.
-     '#date_year_range' => '-3:+3', // Optional, used to set the year range (back 3 years and forward 3 years is the default).
-     '#description' => t('Please Your Show Time.'),
-  );   
-
-  $form['submit'] = array(
-      '#type' => 'submit',
-      '#value' => 'Enter',
-  );
-
-  return $form;
 }
 
 function api_form() {
@@ -97,26 +54,12 @@ function api_form_submit($form, &$form_state) {
     
 }
 
-function test_form_submit($form, &$form_state) {
-    $show_name = $form_state['values']['show_name'];
-    $show_time = $form_state['values']['show_time'];
-    $_SESSION['form_values'] = array($show_name, $show_time);
-
-    db_insert('show_info')
-    ->fields(array(
-      'show_name' => $form_state['values']['show_name'],
-      'show_time' => $form_state['values']['show_time'],       
-    ))->execute();
-    $form_state['redirect'] = 'form_success_page';
-    
-}
-
 function api_form_success() {
     $show_name = $_SESSION['api_form_values'];
     $show_name_clean = str_replace(" ", "+", $show_name);
     $response = file_get_contents('http://api.tvmaze.com/search/shows?q=' . $show_name_clean);
-    $answer = "<p>Search results for: '" . $show_name . "'</p><ul>";
-    // 
+    $answer = "<h3>Click Link to add show to your account</h3><p>Search results for: '" . $show_name . "'</p><ul>";
+    
     $decode = json_decode($response, true);
     foreach ($decode as $episode) {
       $answer .= "<li><a href='/episodes/" . $episode['show']['id'] . "'>" . $episode['show']['name'] . ' (' . substr($episode['show']['premiered'], 0, 4) .")</a></li>";
@@ -141,7 +84,6 @@ function episode_guide($arg){
   
   $show = file_get_contents('http://api.tvmaze.com/shows/' . $arg);
   $show_data = json_decode($show, true);
-  
   $dates = array();
   foreach ($decode as $episode) {
     $answer .= "<li>" . $episode['name'] . ": " . $episode['airtime']  . " " . $episode['airdate'] . "</li>";
@@ -176,14 +118,18 @@ function episode_guide($arg){
     $new_node->field_show_id['und'][0] = array('value'=>$show_data['id']);
     $new_node->field_last_updated['und'][0] = array('value'=>$show_data['updated']);
     $new_node->field_show_users['und'][0] = array('uid'=>$user->uid);
+    $new_node->field_show_network['und'][0] = array('value'=>$show_data['network']['name']);
+    $new_node->field_show_summary['und'][0] = array('value'=>$show_data['summary'], 'format'=>'full_html');
+    $new_node->field_show_status['und'][0] = array('value'=>$show_data['status']);
+    $next = explode('/',$show_data['_links']['nextepisode']['href']);
+    $new_node->field_show_next['und'][0] = array('value'=>end($next));
+    $new_node->field_imdb['und'][0] = array('value'=>"<a href='http://www.imdb.com/title/" . $show_data['externals']['imdb'] . "/'>IMDB</a>", 'format'=>'full_html');
     $new_node = node_submit($new_node);
     node_save($new_node);
     
     $api_response = file_get_contents('http://api.tvmaze.com/shows/' . $show_data['id'] . '/episodes');
     $decode = json_decode($api_response, true);
-    $test_episode = false;
     foreach ($decode as $episode) {
-      if(!$test_episode){
         $new_episode = new stdClass();
         $new_episode->title = $episode['name'];
         $new_episode->type = "episode";
@@ -193,38 +139,34 @@ function episode_guide($arg){
         $new_episode->language = LANGUAGE_NONE;
         $new_episode->field_episode_show_id['und'][0] = array('value'=>$show_data['id']);
         $new_episode->field_episode_show_name['und'][0] = array('value'=>$show_data['name']);
-        $date_array = explode("-", $episode['airdate']);
-        $date = $date_array[2] . "/" . $date_array[1] . "/" . $date_array[0];
-        $new_episode->field_episode_date['und'][0] = array('value'=>$episode['airdate']);
+        $new_episode->field_episode_date['und'][0] = array('value'=>$episode['airdate'] . " " . $episode['airtime'] . ":00");
         $new_episode->field_show_ref['und'][0] = array('nid'=>$new_node->nid);
+        $new_episode->field_episode_id['und'][0] = array('value'=>$episode['id']);
+        $new_episode->field_season['und'][0] = array('value'=>$episode['season']);
+        $new_episode->field_episode_number['und'][0] = array('value'=>$episode['number']);
+        $new_episode->field_episode_summary['und'][0] = array('value'=>$episode['summary'], 'format'=>'full_html');
         $new_episode = node_submit($new_episode);
         node_save($new_episode);
-        $test_episode = true;
-      }
     }
-  }
-  
-  if($found == false){
-    db_insert('show_info')
-    ->fields(array(
-      'show_api_id' => $arg,
-      'user_id' => $user->uid,
-    ))->execute();
-    
+  }else{
+    //add user to show property
   }
   return $answer .= "</ul>";
 }
 
 function test_calendar(){
-  global $user;
+  // global $user;
   // $query = db_select('node', 'n')
   //     ->fields('n', array('nid', 'title'))
   //     ->condition('status', 1)
   //     ->condition('type', 'episode')
-  //     ->condition('title', 'Finish Line')
   //     ->execute();
-
-
+  // 
+  // foreach ($query as $key) {
+  //   print "<pre>"; 
+  //   var_dump(node_load($key->nid));
+  //   print "</pre>"; 
+  // }
     // $result = db_query('SELECT * FROM show_info WHERE user_id = ' . $user->uid);
     // $show_array = array();
     // foreach ($result as $record) {
