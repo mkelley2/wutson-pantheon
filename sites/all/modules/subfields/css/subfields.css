@@ -1,0 +1,22 @@
+div.field-type-subfields div.form-item,
+div.subfields-value {
+  float: left; /* LTR */
+  margin: 0 1px 1em; /* LTR */
+}
+
+/* Clear-fix markup for the inline container */
+div.field-type-subfields:after {
+  content: ".";
+  display: block;
+  height: 0;
+  clear: both;
+  visibility: hidden;
+}
+/* IE6 */
+* html div.div.field-type-subfields {
+  height: 1%;
+}
+/* IE7 */
+*:first-child + html div.div.field-type-subfields {
+  min-height: 1%;
+}

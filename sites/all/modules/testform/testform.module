@@ -139,6 +139,9 @@ function episode_guide($arg){
   $answer = "<ul>";
   $decode = json_decode($response, true);
   
+  $show = file_get_contents('http://api.tvmaze.com/shows/' . $arg);
+  $show_data = json_decode($show, true);
+  
   $dates = array();
   foreach ($decode as $episode) {
     $answer .= "<li>" . $episode['name'] . ": " . $episode['airtime']  . " " . $episode['airdate'] . "</li>";
@@ -150,6 +153,57 @@ function episode_guide($arg){
       $found = true;
     }
   }
+  
+  $query = db_select('node', 'n')
+      ->fields('n', array('nid', 'title'))
+      ->condition('status', 1)
+      ->condition('type', 'show')
+      ->condition('title', $show_data['name'])
+      ->execute();
+
+  $test = false;
+  foreach ($query as $record) {
+    $test = true;
+  }
+  if(!$test){
+    $new_node = new stdClass();
+    $new_node->title = $show_data['name'];
+    $new_node->type = "show";
+    node_object_prepare($new_node);
+    $new_node->uid = $user->uid;
+    $new_node->status = 1;
+    $new_node->language = LANGUAGE_NONE;
+    $new_node->field_show_id['und'][0] = array('value'=>$show_data['id']);
+    $new_node->field_last_updated['und'][0] = array('value'=>$show_data['updated']);
+    $new_node->field_show_users['und'][0] = array('uid'=>$user->uid);
+    $new_node = node_submit($new_node);
+    node_save($new_node);
+    
+    $api_response = file_get_contents('http://api.tvmaze.com/shows/' . $show_data['id'] . '/episodes');
+    $decode = json_decode($api_response, true);
+    $test_episode = false;
+    foreach ($decode as $episode) {
+      if(!$test_episode){
+        $new_episode = new stdClass();
+        $new_episode->title = $episode['name'];
+        $new_episode->type = "episode";
+        node_object_prepare($new_episode);
+        $new_episode->uid = $user->uid;
+        $new_episode->status = 1;
+        $new_episode->language = LANGUAGE_NONE;
+        $new_episode->field_episode_show_id['und'][0] = array('value'=>$show_data['id']);
+        $new_episode->field_episode_show_name['und'][0] = array('value'=>$show_data['name']);
+        $date_array = explode("-", $episode['airdate']);
+        $date = $date_array[2] . "/" . $date_array[1] . "/" . $date_array[0];
+        $new_episode->field_episode_date['und'][0] = array('value'=>$episode['airdate']);
+        $new_episode->field_show_ref['und'][0] = array('nid'=>$new_node->nid);
+        $new_episode = node_submit($new_episode);
+        node_save($new_episode);
+        $test_episode = true;
+      }
+    }
+  }
+  
   if($found == false){
     db_insert('show_info')
     ->fields(array(
@@ -163,23 +217,31 @@ function episode_guide($arg){
 
 function test_calendar(){
   global $user;
-    $result = db_query('SELECT * FROM show_info WHERE user_id = ' . $user->uid);
-    $show_array = array();
-    foreach ($result as $record) {
-      print "<pre>";
-      var_dump($record->show_api_id);
-      print "</pre>";
-      $api_response = file_get_contents('http://api.tvmaze.com/shows/' . $record->show_api_id . '/episodes');
-      $show = file_get_contents('http://api.tvmaze.com/shows/' . $record->show_api_id);
-      $show_data = json_decode($show, true);
-      $show_name = $show_data['name'];
-      $decode = json_decode($api_response, true);
-      foreach ($decode as $episode) {
-        $episode_info = array("Show Name"=> $show_name, "Show Id"=>$record->show_api_id, "Episode Name"=>$episode['name'], "Episode Date"=> $episode['airdate']);
-        array_push($show_array, $episode_info);
-      }
-    }
-    drupal_add_js(array('testform' => array('testvar' => $show_array)), array('type' => 'setting'));
-    drupal_add_js(drupal_get_path('module', 'testform') . '/js/testform.js');
+  // $query = db_select('node', 'n')
+  //     ->fields('n', array('nid', 'title'))
+  //     ->condition('status', 1)
+  //     ->condition('type', 'episode')
+  //     ->condition('title', 'Finish Line')
+  //     ->execute();
+
+
+    // $result = db_query('SELECT * FROM show_info WHERE user_id = ' . $user->uid);
+    // $show_array = array();
+    // foreach ($result as $record) {
+    //   print "<pre>";
+    //   var_dump($record->show_api_id);
+    //   print "</pre>";
+    //   $api_response = file_get_contents('http://api.tvmaze.com/shows/' . $record->show_api_id . '/episodes');
+    //   $show = file_get_contents('http://api.tvmaze.com/shows/' . $record->show_api_id);
+    //   $show_data = json_decode($show, true);
+    //   $show_name = $show_data['name'];
+    //   $decode = json_decode($api_response, true);
+    //   foreach ($decode as $episode) {
+    //     $episode_info = array("Show Name"=> $show_name, "Show Id"=>$record->show_api_id, "Episode Name"=>$episode['name'], "Episode Date"=> $episode['airdate'], "Air Time"=>$episode['airtime'], "image"=>$episode['image']['original']);
+    //     array_push($show_array, $episode_info);
+    //   }
+    // }
+    // drupal_add_js(array('testform' => array('testvar' => $show_array)), array('type' => 'setting'));
+    // drupal_add_js(drupal_get_path('module', 'testform') . '/js/testform.js');
     return "<div><button class='prev_btn'>Previous Week</button><button class='today_btn'>Today</button><button class='next_btn'>Next Week</button><div class='container calendar_holder'></div></div>";
 }

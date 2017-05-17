@@ -37,20 +37,21 @@
       "<div class='row'>" + localeplus3 + "<ul id='" + dayplus3 + "'></ul></div>"
     );
     episode_info.forEach(function(elem){
+      console.log(elem);
       if(elem['Episode Date'] == day){
-        $("#" + day).append("<li>" + elem['Show Name'] + " - " + elem['Episode Name'] + "</li>");
+        $("#" + day).append("<li>" + elem['Show Name'] + " - " + elem['Episode Name'] + " @ " + elem['Air Time'] + "<img src='" + elem['image'] + "'></li>");
       }else if(elem['Episode Date'] == dayminus1){
-        $("#" + dayminus1).append("<li>" + elem['Show Name'] + " - " + elem['Episode Name'] + "</li>");
+        $("#" + dayminus1).append("<li>" + elem['Show Name'] + " - " + elem['Episode Name'] + " @ " + elem['Air Time'] + "<img src='" + elem['image'] + "'></li>");
       }else if(elem['Episode Date'] == dayminus2){
-        $("#" + dayminus2).append("<li>" + elem['Show Name'] + " - " + elem['Episode Name'] + "</li>");
+        $("#" + dayminus2).append("<li>" + elem['Show Name'] + " - " + elem['Episode Name'] + " @ " + elem['Air Time'] + "<img src='" + elem['image'] + "'></li>");
       }else if(elem['Episode Date'] == dayminus3){
-        $("#" + dayminus3).append("<li>" + elem['Show Name'] + " - " + elem['Episode Name'] + "</li>");
+        $("#" + dayminus3).append("<li>" + elem['Show Name'] + " - " + elem['Episode Name'] + " @ " + elem['Air Time'] + "<img src='" + elem['image'] + "'></li>");
       }else if(elem['Episode Date'] == dayplus1){
-        $("#" + dayplus1).append("<li>" + elem['Show Name'] + " - " + elem['Episode Name'] + "</li>");
+        $("#" + dayplus1).append("<li>" + elem['Show Name'] + " - " + elem['Episode Name'] + " @ " + elem['Air Time'] + "<img src='" + elem['image'] + "'></li>");
       }else if(elem['Episode Date'] == dayplus2){
-        $("#" + dayplus2).append("<li>" + elem['Show Name'] + " - " + elem['Episode Name'] + "</li>");
+        $("#" + dayplus2).append("<li>" + elem['Show Name'] + " - " + elem['Episode Name'] + " @ " + elem['Air Time'] + "<img src='" + elem['image'] + "'></li>");
       }else if(elem['Episode Date'] == dayplus3){
-        $("#" + dayplus3).append("<li>" + elem['Show Name'] + " - " + elem['Episode Name'] + "</li>");
+        $("#" + dayplus3).append("<li>" + elem['Show Name'] + " - " + elem['Episode Name'] + " @ " + elem['Air Time'] + "<img src='" + elem['image'] + "'></li>");
       }
     });
   }
@@ -60,22 +61,18 @@
   Drupal.behaviors.testform = {
     attach: function (context, settings) {
       episode_info = settings.testform.testvar;
-      console.log(episode_info);
       dateRange();
       $(".prev_btn").click(function(){
         arg -= 7;
         dateRange();
-        console.log(day);
       });
       $(".today_btn").click(function(){
         arg = 0;
         dateRange();
-        console.log(day);
       });
       $(".next_btn").click(function(){
         arg += 7;
         dateRange();
-        console.log(day);
       });
     }
   };
