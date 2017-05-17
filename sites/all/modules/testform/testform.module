@@ -40,12 +40,6 @@ function testform_menu() {
         'access callback' => TRUE,
         'type' => MENU_NORMAL_ITEM,
     );
-    $items['api_form_success_page'] = array(
-        'title' => 'Show Removed!',
-        'page callback' => 'show_remove_success',
-        'access callback' => TRUE,
-        'type' => MENU_CALLBACK,
-    );
     return $items;
 }
 
@@ -183,13 +177,12 @@ function episode_delete(){
 function show_remove_form(){
   global $user;
   
-  $result = db_query('SELECT * FROM field_data_field_show_users WHERE field_show_users_uid = 1');
+  $result = db_query('SELECT * FROM field_data_field_show_users WHERE field_show_users_uid =' . $user->uid);
   $options =  array();
   foreach ($result as $key) {
     $node = node_load($key->entity_id);
     $options[$node->nid] = t($node->title);
   }
-  
   $form['shows'] = array(
        '#type' => 'select',
        '#title' => t('Select Show you wish to remove'),
@@ -208,7 +201,6 @@ function show_remove_form_submit($form, &$form_state) {
   global $user;
   
     $show_id = $form_state['values']['shows'];
-    var_dump($show_id);
     
     $node = node_load($show_id);
     $show_name = $node->title;
@@ -226,9 +218,6 @@ function show_remove_form_submit($form, &$form_state) {
     
 }
 
-function show_remove_success(){
-  
-}
 
 function testform_page_alter(&$page){
   global $user;
