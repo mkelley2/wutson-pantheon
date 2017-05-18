@@ -303,7 +303,12 @@ function collection(){
   $options =  array();
   foreach ($result as $key) {
     $node = node_load($key->entity_id);
-    $output .= "<li><a href='/show/" . $key->entity_id . "'>" . $node->title . "</a></li>";
+    $options[$key->entity_id] = $node->title;
+  }
+  asort($options);
+  foreach ($options as $id => $value) {
+    # code...
+    $output .= "<li><a href='/show/" . $id . "'>" . $value . "</a></li>";
   }
   
   $output .= "</ul>";
@@ -334,9 +339,6 @@ function show_episodes($arg){
     
     $output .= "<li><a href='/node/" . $ep_node->nid . "'> S" . $season . "E" . $episode_num . " - " . $ep_node->title . "</a>: " . date("M jS Y",strtotime($ep_date)) . "</li>";
   }
-  // print "<pre>";
-  // var_dump($episode);
-  // print "</pre>";
   
   
   return $output;
