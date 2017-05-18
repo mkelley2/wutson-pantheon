@@ -166,9 +166,6 @@ function episode_guide($arg){
         $new_episode = node_submit($new_episode);
         node_save($new_episode);
     }
-  }else{
-    
-    drupal_set_message($show_data['name'] . " is already in your collection.");
   }
   
   return $answer .= "</ul>";
