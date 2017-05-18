@@ -34,6 +34,19 @@ function testform_menu() {
         'access callback' => TRUE,
         'type' => MENU_NORMAL_ITEM,
     );
+    $items['collection'] = array(
+        'title' => 'Your Collection',
+        'page callback' => 'collection',
+        'access callback' => TRUE,
+        'type' => MENU_CALLBACK,
+    );
+    $items['show/%'] = array(
+        'title' => 'Episodes for:',
+        'page callback' => 'show_episodes',
+        'page arguments' => array(1),
+        'access callback' => TRUE,
+        'type' => MENU_CALLBACK,
+    );
     return $items;
 }
 
@@ -287,29 +300,37 @@ function testform_page_alter(&$page){
   }
 }
 
-//old js link
-// 
-// foreach ($query as $key) {
-//   print "<pre>"; 
-//   var_dump(node_load($key->nid));
-//   print "</pre>"; 
-// }
-  // $result = db_query('SELECT * FROM show_info WHERE user_id = ' . $user->uid);
-  // $show_array = array();
-  // foreach ($result as $record) {
-  //   print "<pre>";
-  //   var_dump($record->show_api_id);
-  //   print "</pre>";
-  //   $api_response = file_get_contents('http://api.tvmaze.com/shows/' . $record->show_api_id . '/episodes');
-  //   $show = file_get_contents('http://api.tvmaze.com/shows/' . $record->show_api_id);
-  //   $show_data = json_decode($show, true);
-  //   $show_name = $show_data['name'];
-  //   $decode = json_decode($api_response, true);
-  //   foreach ($decode as $episode) {
-  //     $episode_info = array("Show Name"=> $show_name, "Show Id"=>$record->show_api_id, "Episode Name"=>$episode['name'], "Episode Date"=> $episode['airdate'], "Air Time"=>$episode['airtime'], "image"=>$episode['image']['original']);
-  //     array_push($show_array, $episode_info);
-  //   }
-  // }
-  // drupal_add_js(array('testform' => array('testvar' => $show_array)), array('type' => 'setting'));
-  // drupal_add_js(drupal_get_path('module', 'testform') . '/js/testform.js');
-    // return "<div><button class='prev_btn'>Previous Week</button><button class='today_btn'>Today</button><button class='next_btn'>Next Week</button><div class='container calendar_holder'></div></div>";
+function collection(){
+  global $user;
+  
+  $output = "<ul>";
+  
+  $result = db_query('SELECT * FROM field_data_field_show_users WHERE field_show_users_uid =' . $user->uid);
+  $options =  array();
+  foreach ($result as $key) {
+    $node = node_load($key->entity_id);
+    $output .= "<li><a href='/show/" . $key->entity_id . "'>" . $node->title . "</a></li>";
+  }
+  
+  $output .= "</ul>";
+  return $output;
+}
+
+function show_episodes($arg){
+  $node = node_load($arg);
+  $show_id = $node->field_show_id['und'][0]['value'];
+  $result = db_query('SELECT * FROM field_data_field_episode_show_id WHERE field_episode_show_id_value =' . $show_id);
+
+  $output = "<h3><a href='/node/" . $arg . "'>" . $node->title . "</a></h3><ul>";
+  foreach ($result as $episode) {
+    $ep_node = node_load($episode->entity_id);
+    $ep_date = $ep_node->field_episode_date['und'][0]['value'];
+    $output .= "<li><a href='/node/" . $ep_node->nid . "'>" . $ep_node->title . "</a>: " . date("M jS Y",strtotime($ep_date)) . "</li>";
+  }
+  // print "<pre>";
+  // var_dump($episode);
+  // print "</pre>";
+  
+  
+  return $output;
+}
