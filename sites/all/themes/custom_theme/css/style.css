@@ -51,3 +51,8 @@
 .calendar-calendar {
   margin-bottom: 50px;
 }
+
+.date-display-single {
+  color: black;
+  font-size: 12px;
+}
