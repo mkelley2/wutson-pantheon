@@ -112,6 +112,21 @@ function episode_guide($arg){
   $test = false;
   foreach ($query as $record) {
     $test = true;
+    
+    $found_node = node_load($record->nid);
+    $found_user = false;
+    foreach ($found_node->field_show_users['und'] as $selected_user) {
+      if($selected_user['uid']==$user->uid){
+        $found_user = true;
+      }
+    }
+    if(!$found_user){
+      array_push($found_node->field_show_users['und'], array('uid'=>$user->uid));
+      $found_node = node_submit($found_node);
+      node_save($found_node);
+      drupal_set_message($show_data['name'] . " has been added to your collection!");
+      
+    }
   }
   if(!$test){
     $new_node = new stdClass();
@@ -127,10 +142,11 @@ function episode_guide($arg){
     $new_node->field_show_network['und'][0] = array('value'=>$show_data['network']['name']);
     $new_node->field_show_summary['und'][0] = array('value'=>$show_data['summary'], 'format'=>'full_html');
     $new_node->field_show_status['und'][0] = array('value'=>$show_data['status']);
-    $next = explode('/',$show_data['_links']['nextepisode']['href']);
     $new_node->field_imdb['und'][0] = array('value'=>"<a href='http://www.imdb.com/title/" . $show_data['externals']['imdb'] . "/'>IMDB</a>", 'format'=>'full_html');
     $new_node = node_submit($new_node);
     node_save($new_node);
+    drupal_set_message($show_data['name'] . " has been added to your collection!");
+    
     
     $api_response = file_get_contents('http://api.tvmaze.com/shows/' . $show_data['id'] . '/episodes');
     $decode = json_decode($api_response, true);
@@ -154,8 +170,10 @@ function episode_guide($arg){
         node_save($new_episode);
     }
   }else{
-    //add user to show property
+    
+    drupal_set_message($show_data['name'] . " is already in your collection.");
   }
+  
   return $answer .= "</ul>";
 }
 
