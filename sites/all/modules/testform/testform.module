@@ -89,15 +89,11 @@ function search_form_success() {
 function episode_guide($arg){
   global $user;
   $response = file_get_contents('http://api.tvmaze.com/shows/' . $arg . '/episodes');
-  $answer = "<ul>";
   $decode = json_decode($response, true);
   
   $show = file_get_contents('http://api.tvmaze.com/shows/' . $arg);
   $show_data = json_decode($show, true);
   $dates = array();
-  foreach ($decode as $episode) {
-    $answer .= "<li>" . $episode['name'] . ": " . $episode['airtime']  . " " . $episode['airdate'] . "</li>";
-  }
   
   $query = db_select('node', 'n')
       ->fields('n', array('nid', 'title'))
@@ -323,7 +319,20 @@ function show_episodes($arg){
   foreach ($result as $episode) {
     $ep_node = node_load($episode->entity_id);
     $ep_date = $ep_node->field_episode_date['und'][0]['value'];
-    $output .= "<li><a href='/node/" . $ep_node->nid . "'>" . $ep_node->title . "</a>: " . date("M jS Y",strtotime($ep_date)) . "</li>";
+    
+    if($ep_node->field_season['und'][0]['value']<10){
+      $season = "0" . $ep_node->field_season['und'][0]['value'];
+    }else{
+      $season = $ep_node->field_season['und'][0]['value'];
+    }
+    
+    if($ep_node->field_episode_number['und'][0]['value']<10){
+      $episode_num = "0" . $ep_node->field_episode_number['und'][0]['value'];
+    }else{
+      $episode_num = $ep_node->field_episode_number['und'][0]['value'];
+    }
+    
+    $output .= "<li><a href='/node/" . $ep_node->nid . "'> S" . $season . "E" . $episode_num . " - " . $ep_node->title . "</a>: " . date("M jS Y",strtotime($ep_date)) . "</li>";
   }
   // print "<pre>";
   // var_dump($episode);
