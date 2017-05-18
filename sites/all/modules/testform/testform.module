@@ -168,7 +168,8 @@ function episode_guide($arg){
     }
   }
   
-  return $answer .= "</ul>";
+  drupal_goto('<front>');
+
 }
 
 function episode_delete(){
