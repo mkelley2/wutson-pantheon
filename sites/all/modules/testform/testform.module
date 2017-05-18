@@ -278,7 +278,7 @@ function testform_page_alter(&$page){
               $new_episode->field_episode_show_id['und'][0] = array('value'=>$show_data['id']);
               $new_episode->field_episode_show_name['und'][0] = array('value'=>$show_data['name']);
               if($episode['airtime']==""){
-                $episode['airtime'] = '00:00:00';
+                $episode['airtime'] = '00:00';
               }
               $new_episode->field_episode_date['und'][0] = array('value'=>$episode['airdate'] . " " . $episode['airtime'] . ":00");
               $new_episode->field_show_ref['und'][0] = array('nid'=>$show_node->nid);
