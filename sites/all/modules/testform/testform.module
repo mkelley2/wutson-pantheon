@@ -192,6 +192,7 @@ function show_remove_form(){
     $node = node_load($key->entity_id);
     $options[$node->nid] = t($node->title);
   }
+  asort($options);
   $form['shows'] = array(
        '#type' => 'select',
        '#title' => t('Select Show you wish to remove'),
